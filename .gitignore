@@ -25,10 +25,14 @@ __pycache__/
 *.sqlite3
 data/database/
 data/.secrets/
+data/raw/
+data/processed/
 data/raw/instruments/
 data/raw/historical/
 data/processed/market_data/
 data/processed/market_data_manifest.csv
 data/processed/kite_probe_manifest.csv
+data/processed/backtests/
 logs/
 .pytest_tmp/
+..pytest_tmp/

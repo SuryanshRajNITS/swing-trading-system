@@ -8,7 +8,7 @@ This project is being developed as a research-first, backtest-first, and paper-t
 
 Milestone 1 provides the project foundation: settings loading and validation, basic logging, and a minimal SQLite initialization/health check. The deterministic trading strategy and backtesting engine have not been implemented.
 
-The repository includes manual Kite Connect authentication, read-only session verification, NSE instrument snapshots, historical candle access, and a date-aware point-in-time NIFTY 50 universe. A resumable daily PIT dataset builder and official NSE daily CSV importer are available. Historical dataset generation requires an authenticated Kite session; strategy/backtesting, 60-minute and 15-minute bulk data, and broker orders are not implemented. Live trading is disabled by default (`trading_mode: paper` and `live_trading_enabled: false`).
+The repository includes manual Kite Connect authentication, read-only session verification, NSE instrument snapshots, historical candle access, and a date-aware point-in-time NIFTY 50 universe. A resumable daily PIT dataset builder, official NSE daily CSV importer, and deterministic event-driven backtest foundation are available. The real swing strategy, paper/live execution, 60-minute and 15-minute bulk data, and broker orders are not implemented. Live trading is disabled by default (`trading_mode: paper` and `live_trading_enabled: false`).
 
 ## Architecture
 
@@ -121,10 +121,36 @@ Market-data coverage checks validated rows, whether data brackets each PIT membe
 
 Weekly candles are derived locally, never downloaded natively. `src.data.weekly.resample_daily_to_weekly()` aggregates observed sessions only and accepts an exchange session calendar; `last_completed_weekly_candle(as_of_timestamp, ...)` withholds the current week until its final session close. No weekly strategy is implemented.
 
+### Backtest foundation
+
+The backtest engine consumes validated, manifested daily files and the point-in-time universe. Decisions use a shared `StrategyContext`; `EntrySignal`, `ExitSignal`, and `RiskPolicy` are decision contracts intended to remain independent of broker fills. Historical entry/exit fills are simulated only in `src.backtest`; no Kite execution or order API is used. Signals are timestamped at the 15:30 IST daily close and execute at 09:15 IST on the next available data session. Positions are monitored each session against daily OHLC. If both stop and target fall inside the same daily range, stop is applied first; a gap through a stop fills at the open. Exit timestamps for daily-bar stops/targets use 15:30 as the bar label and explicitly do not claim an inferred intraday fill time.
+
+The initial risk policy sizes to `equity * max_risk_per_trade / (entry - stop)`, then caps the whole-share quantity to available cash after estimated entry costs. It does not use leverage. Each date checks that every PIT-eligible security has a daily candle; missing data stops the run instead of silently dropping that security. The engine exposes only daily rows up to the current close and only the most recently completed weekly candle. Current-week weekly data is not visible until the final session closes.
+
+Choose exactly one research phase when running the smoke strategy. Other phases are not run automatically:
+
+```powershell
+python -m src.backtest.run --phase development --strategy smoke
+```
+
+Available phases are `development` (2023-01-01–2024-12-31), `validation` (2025), `final_oos` (2026-01-01–2026-09-22), and `stress` (2020–2022). The engine accepts explicit date bounds with `--start` and `--end`; phases are not parameter optimization instructions. The smoke rule is only an engine fixture: it emits a signal when a daily close exceeds the prior close, places a synthetic stop at that candle's low, and uses a configurable 2R target. It is not the real strategy and says nothing about profitability.
+
+Backtest run JSON (metadata, config hash, events, equity path, cash, reserved capital, realized and unrealized P&L, open positions, closed-trade ledger, and metrics) is written under ignored `data/processed/backtests/`. The run ID is deterministic for strategy parameters, data, and configuration; `created_at` is an audit timestamp and changes across reruns. The dataset version hashes the selected manifest and candle files.
+
+The default transaction-cost scenario is `CURRENT_ZERODHA_EQUITY_DELIVERY_2026`, verified against the official [Zerodha charges schedule](https://zerodha.com/charges), its [DP charge details](https://support.zerodha.com/category/account-opening/resident-individual/ri-charges/articles/what-do-dp-charges-mean), and Zerodha's [STT explanation](https://support.zerodha.com/category/account-opening/resident-individual/ri-charges/articles/how-is-the-securities-transaction-tax-stt-calculated). It configures ₹0 retail delivery brokerage; STT 0.1% on both buy and sell; current NSE transaction charges 0.00307%; SEBI ₹10/crore; NSE IPFT ₹0.01/crore; GST 18% on brokerage, transaction, SEBI, and IPFT charges; buy stamp duty 0.015%; and ₹15.34 DP charge per scrip per sell date. The DP default assumes a male primary holder and includes its 18% GST. Brokerage and DP values remain configurable.
+
+The official schedule changes over time: for example, Zerodha's [notice](https://zerodha.com/marketintel/bulletin/391488/revision-in-transactions-charges-from-1st-october-2024) records NSE delivery transaction charges changing to 0.00297% from October 1, 2024. The current rates are only a current-live-cost comparison and are **not** backdated to reproduce exact 2023–2026 charges. The model rounds STT to the nearest rupee using the published Zerodha convention. Other proportional charges are retained at their computed precision; contract-note-level rounding can cause small differences.
+
+Slippage is separate from statutory/broker charges and defaults to zero because it is strategy/execution dependent, not an official fixed rate. Configure `slippage_bps` before interpreting live-cost results. Select `--cost-scenario raw_zero` only for an explicit zero-cost/raw comparator; that mode disables both transaction and operating costs.
+
+Fixed operating costs are separate from trading cash and per-trade costs. `config/settings.yaml` defaults to Kite Connect ₹500/month, hosting ₹0/month, and other costs ₹0/month; the latter two are configurable and not estimates. Each calendar month touched by the inclusive evaluation dates is charged in full, including partial first/last months. By default these costs affect only `economic_net_profit` / `economic_net_return`; they do not change fills, sizing cash, completed-trade P&L, or R-multiple. The run metrics report trading return, transaction costs, Kite, hosting, other operating costs, charged months, operating total, and economic return separately.
+
+Metrics include return, trade count, win rate, average win/loss, profit factor, expectancy, average/median R, maximum drawdown and drawdown percentage, average exposure, and average holding period. Annualized metrics are intentionally omitted. Open positions at the end are marked to the final available close and reported separately; they are not force-liquidated or counted as completed trades.
+
 ## Run tests
 
 ```powershell
 python -m pytest
 ```
 
-The tests cover settings and safety defaults, SQLite initialization/health, mocked Kite authentication/session and historical-data behavior, instrument validation, daily market-data provenance/validation, historical probes, official NSE CSV parsing, and weekly close-time look-ahead protection. No strategy tests exist yet because no strategy logic has been implemented.
+The tests cover settings and safety defaults, SQLite initialization/health, mocked Kite authentication/session and historical-data behavior, instrument validation, daily market-data provenance/validation, historical probes, official NSE CSV parsing, weekly close-time look-ahead protection, and the synthetic portfolio/event-driven backtest foundation. The smoke strategy is not the production strategy.

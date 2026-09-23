@@ -152,7 +152,8 @@ def test_oos_cutoff_and_future_scheduled_replacement(universe: UniverseProvider)
 
 
 def test_current_universe_is_explicit_and_never_a_fallback(universe: UniverseProvider) -> None:
-    current = universe.current_members()
+    # Pin the fixture's known current-snapshot date instead of relying on wall-clock time.
+    current = universe.current_members(date(2026, 9, 23))
     assert len(current) == 50
     assert all(item.universe_id == CURRENT for item in current)
     assert {item.security_id for item in current} == {

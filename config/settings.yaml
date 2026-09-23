@@ -13,6 +13,32 @@ logging:
 
 timezone: Asia/Kolkata
 
+backtest:
+  max_open_positions: 10
+  smoke_target_r: 2.0
+  transaction_costs:
+    # Current official Zerodha/NSE delivery assumptions, checked 2026-09-24.
+    # Proportional amounts are fractions of turnover; DP includes its GST.
+    scenario: CURRENT_ZERODHA_EQUITY_DELIVERY_2026
+    brokerage_rate: 0.0
+    stt_buy_rate: 0.001
+    stt_sell_rate: 0.001
+    nse_transaction_rate: 0.0000307
+    gst_rate: 0.18
+    sebi_rate: 0.000001
+    stamp_buy_rate: 0.00015
+    ipft_rate: 0.000000001
+    dp_charge_per_sell: 15.34  # Male primary holder; once per scrip per sell date.
+    slippage_bps: 0.0
+    verification_label: CURRENT_ZERODHA_EQUITY_DELIVERY_2026
+    verified_on: "2026-09-24"
+    provenance: "https://zerodha.com/charges; https://support.zerodha.com/category/account-opening/resident-individual/ri-charges/articles/what-do-dp-charges-mean; https://support.zerodha.com/category/account-opening/resident-individual/ri-charges/articles/how-is-the-securities-transaction-tax-stt-calculated"
+  operating_costs:
+    kite_connect_monthly: 500
+    hosting_monthly: 0
+    other_monthly: 0
+    apply_to_economic_results: true
+
 data:
   history_start_date: "2023-01-01"
   history_end_date: "yesterday"
