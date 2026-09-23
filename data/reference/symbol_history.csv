@@ -39,7 +39,9 @@ NSEEQ-0037,JSWSTEEL,JSW Steel Ltd.,2023-01-01,,sebi_dec2022
 NSEEQ-0038,KOTAKBANK,Kotak Mahindra Bank Ltd.,2023-01-01,,sebi_dec2022
 NSEEQ-0039,KWIL,Kwality Wall's (India) Ltd.,2026-02-16,2026-02-24,hul_dummy
 NSEEQ-0040,LT,Larsen & Toubro Ltd.,2023-01-01,,sebi_dec2022
-NSEEQ-0041,LTIM,LTIMindtree Ltd.,2023-07-13,2024-09-30,hdfc_ltim
+NSEEQ-0041,LTIM,LTIMindtree Ltd.,2023-07-13,2026-02-27,nse_ltim_symbol_change
+NSEEQ-0041,LTM,LTIMindtree Ltd.,2026-02-27,2026-04-17,nse_ltim_symbol_change
+NSEEQ-0041,LTM,LTM Ltd.,2026-04-17,,nse_ltm_name_change
 NSEEQ-0042,M&M,Mahindra & Mahindra Ltd.,2023-01-01,,sebi_dec2022
 NSEEQ-0043,MARUTI,Maruti Suzuki India Ltd.,2023-01-01,,sebi_dec2022
 NSEEQ-0044,MAXHEALTH,Max Healthcare Institute Ltd.,2025-09-30,,sep2025

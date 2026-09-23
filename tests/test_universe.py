@@ -84,6 +84,14 @@ def test_zomato_eternal_is_one_security_with_dated_symbols(universe: UniversePro
     assert universe.symbol_for(before.security_id, date(2025, 4, 9)) == "ETERNAL"
 
 
+def test_ltim_ltm_symbol_history_is_independent_of_universe_membership(universe: UniverseProvider) -> None:
+    security_id = "NSEEQ-0041"
+    assert universe.symbol_for(security_id, date(2024, 9, 30)) == "LTIM"
+    assert universe.symbol_for(security_id, date(2026, 2, 26)) == "LTIM"
+    assert universe.symbol_for(security_id, date(2026, 2, 27)) == "LTM"
+    assert universe.symbol_for(security_id, date(2026, 4, 16)) == "LTM"
+
+
 def test_tata_motors_name_and_symbol_change(universe: UniverseProvider) -> None:
     previous = next(item for item in universe.members_on(date(2025, 10, 23)) if item.symbol == "TATAMOTORS")
     current = next(item for item in universe.members_on(date(2025, 10, 24)) if item.symbol == "TMPV")

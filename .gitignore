@@ -27,4 +27,8 @@ data/database/
 data/.secrets/
 data/raw/instruments/
 data/raw/historical/
+data/processed/market_data/
+data/processed/market_data_manifest.csv
+data/processed/kite_probe_manifest.csv
 logs/
+.pytest_tmp/

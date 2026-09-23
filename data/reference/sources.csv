@@ -24,3 +24,5 @@ nse_zomato_isin,https://nsearchives.nseindia.com/corporate/ZOMATO_06022025170452
 tata_symbol_change,https://nsearchives.nseindia.com/content/circulars/CML70875.pdf,NSE circular: TATAMOTORS renamed/re-symbolled TMPV effective 2025-10-24,2025-10-16
 tata_pv_isin,https://nsearchives.nseindia.com/corporate/ixbrl/INTEGRATED_FILING_INDAS_185694_12082026161937_iXBRL_WEB.html,NSE-filed company disclosure validating TMPV ISIN INE155A01022,2026-08-12
 nse_itc_hotels_listing,https://nsearchives.nseindia.com/web/sites/default/files/2025-01/PR_list_27012025.pdf,"NSE listing notice for ITC Hotels, including symbol, company name, and ISIN INE379A01028",2025-01-27
+nse_ltim_symbol_change,https://nsearchives.nseindia.com/content/circulars/FAOP72935.pdf,NSE circular changing LTIMindtree trading symbol from LTIM to LTM effective 2026-02-27,2026-02-24
+nse_ltm_name_change,https://nsearchives.nseindia.com/content/circulars/CML73700.pdf,NSE circular changing LTIMindtree Limited name to LTM Limited effective 2026-04-17,2026-04-10
