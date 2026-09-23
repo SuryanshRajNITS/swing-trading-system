@@ -24,4 +24,7 @@ __pycache__/
 *.sqlite
 *.sqlite3
 data/database/
+data/.secrets/
+data/raw/instruments/
+data/raw/historical/
 logs/

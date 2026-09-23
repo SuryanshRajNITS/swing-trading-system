@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
-from src.configuration import DatabaseSettings, LoggingSettings, load_settings
+from src.configuration import DEFAULT_SETTINGS_PATH, DatabaseSettings, LoggingSettings, load_settings
 from src.database import database_is_healthy, initialize_database
 from src.logging_config import configure_logging
 
@@ -19,6 +21,25 @@ def test_default_settings_are_loaded_and_live_trading_is_disabled() -> None:
     assert settings.initial_capital == 10000
     assert settings.max_risk_per_trade == 0.01
     assert settings.timezone == "Asia/Kolkata"
+
+
+def test_historical_date_settings_resolve_yesterday_in_market_timezone() -> None:
+    settings = load_settings()
+    expected_yesterday = datetime.now(ZoneInfo("Asia/Kolkata")).date() - timedelta(days=1)
+
+    assert settings.historical_data.start_date.isoformat() == "2023-01-01"
+    assert settings.historical_data.end_date == expected_yesterday
+
+
+def test_invalid_historical_date_range_fails_clearly(tmp_path: Path) -> None:
+    settings_file = tmp_path / "settings.yaml"
+    settings_text = DEFAULT_SETTINGS_PATH.read_text(encoding="utf-8")
+    settings_text = settings_text.replace('history_start_date: "2023-01-01"', 'history_start_date: "2099-01-01"')
+    settings_text = settings_text.replace('history_end_date: "yesterday"', 'history_end_date: "2023-01-01"')
+    settings_file.write_text(settings_text, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="must not be later"):
+        load_settings(settings_file)
 
 
 def test_invalid_configuration_fails_clearly(tmp_path: Path) -> None:

@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +27,12 @@ class LoggingSettings:
 
 
 @dataclass(frozen=True)
+class HistoricalDataSettings:
+    start_date: date
+    end_date: date
+
+
+@dataclass(frozen=True)
 class AppSettings:
     environment: str
     trading_mode: str
@@ -34,6 +42,7 @@ class AppSettings:
     database: DatabaseSettings
     logging: LoggingSettings
     timezone: str
+    historical_data: HistoricalDataSettings
 
 
 def _require_mapping(value: Any, name: str) -> dict[str, Any]:
@@ -47,6 +56,21 @@ def _required_string(data: dict[str, Any], key: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"Setting '{key}' must be a non-empty string.")
     return value.strip()
+
+
+def _parse_config_date(value: Any, name: str, timezone: ZoneInfo) -> date:
+    if isinstance(value, datetime):
+        raise ValueError(f"Setting '{name}' must be a date, not a timestamp.")
+    if isinstance(value, date):
+        return value
+    if not isinstance(value, str):
+        raise ValueError(f"Setting '{name}' must be an ISO date or 'yesterday'.")
+    if value.strip().lower() == "yesterday":
+        return datetime.now(timezone).date() - timedelta(days=1)
+    try:
+        return date.fromisoformat(value.strip())
+    except ValueError:
+        raise ValueError(f"Setting '{name}' must be an ISO date (YYYY-MM-DD) or 'yesterday'.") from None
 
 
 def load_settings(path: str | Path = DEFAULT_SETTINGS_PATH) -> AppSettings:
@@ -89,6 +113,18 @@ def load_settings(path: str | Path = DEFAULT_SETTINGS_PATH) -> AppSettings:
         target = Path(value).expanduser()
         return target.resolve() if target.is_absolute() else (PROJECT_ROOT / target).resolve()
 
+    timezone_name = _required_string(data, "timezone")
+    try:
+        market_timezone = ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError:
+        raise ValueError(f"Setting 'timezone' is not a recognized timezone: {timezone_name}.") from None
+
+    historical = _require_mapping(data.get("data"), "data")
+    start_date = _parse_config_date(historical.get("history_start_date"), "data.history_start_date", market_timezone)
+    end_date = _parse_config_date(historical.get("history_end_date"), "data.history_end_date", market_timezone)
+    if start_date > end_date:
+        raise ValueError("Setting 'data.history_start_date' must not be later than 'data.history_end_date'.")
+
     return AppSettings(
         environment=environment,
         trading_mode=trading_mode,
@@ -100,5 +136,6 @@ def load_settings(path: str | Path = DEFAULT_SETTINGS_PATH) -> AppSettings:
             level=log_level,
             path=local_path(_required_string(logging_data, "path")),
         ),
-        timezone=_required_string(data, "timezone"),
+        timezone=timezone_name,
+        historical_data=HistoricalDataSettings(start_date=start_date, end_date=end_date),
     )
