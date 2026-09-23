@@ -1,0 +1,14 @@
+environment: development
+trading_mode: paper
+live_trading_enabled: false
+initial_capital: 10000
+max_risk_per_trade: 0.01
+
+database:
+  path: data/database/trading_system.db
+
+logging:
+  level: INFO
+  path: logs/application.log
+
+timezone: Asia/Kolkata
