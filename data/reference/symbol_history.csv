@@ -1,0 +1,68 @@
+security_id,symbol,company_name,effective_from,effective_to,source_id
+NSEEQ-0001,ADANIENT,Adani Enterprises Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0002,ADANIPORTS,Adani Ports and Special Economic Zone Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0003,APOLLOHOSP,Apollo Hospitals Enterprise Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0004,ASIANPAINT,Asian Paints Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0005,AXISBANK,Axis Bank Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0006,BAJAJ-AUTO,Bajaj Auto Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0007,BAJAJFINSV,Bajaj Finserv Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0008,BAJFINANCE,Bajaj Finance Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0009,BEL,Bharat Electronics Ltd.,2024-09-30,,sep2024
+NSEEQ-0010,BHARTIARTL,Bharti Airtel Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0011,BPCL,Bharat Petroleum Corporation Ltd.,2023-01-01,2025-03-28,sebi_dec2022
+NSEEQ-0012,BRITANNIA,Britannia Industries Ltd.,2023-01-01,2025-03-28,sebi_dec2022
+NSEEQ-0013,BSE,BSE Ltd.,2026-09-30,,sep2026
+NSEEQ-0014,CIPLA,Cipla Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0015,COALINDIA,Coal India Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0016,DIVISLAB,Divi's Laboratories Ltd.,2023-01-01,2024-09-30,sebi_dec2022
+NSEEQ-0017,DRREDDY,Dr. Reddy's Laboratories Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0018,DUMMYHDLVR,Hindustan Unilever ice-cream demerger index placeholder,2025-12-05,2026-02-16,hul_dummy
+NSEEQ-0019,DUMMYITC,ITC Hotels demerger index placeholder,2025-01-06,2025-01-29,itc_in
+NSEEQ-0020,DUMMYTATAM,Tata Motors demerger index placeholder,2025-10-14,2025-11-12,tata_dummy
+NSEEQ-0021,EICHERMOT,Eicher Motors Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0022,GRASIM,Grasim Industries Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0023,HCLTECH,HCL Technologies Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0024,HDFC,Housing Development Finance Corporation Ltd.,2023-01-01,2023-07-13,sebi_dec2022
+NSEEQ-0025,HDFCBANK,HDFC Bank Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0026,HDFCLIFE,HDFC Life Insurance Company Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0027,HEROMOTOCO,Hero MotoCorp Ltd.,2023-01-01,2025-09-30,sebi_dec2022
+NSEEQ-0028,HINDALCO,Hindalco Industries Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0029,HINDUNILVR,Hindustan Unilever Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0030,ICICIBANK,ICICI Bank Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0031,INDIGO,InterGlobe Aviation Ltd.,2025-09-30,,sep2025
+NSEEQ-0032,INDUSINDBK,IndusInd Bank Ltd.,2023-01-01,2025-09-30,sebi_dec2022
+NSEEQ-0033,INFY,Infosys Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0034,ITC,ITC Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0035,ITCHOTELS,ITC Hotels Ltd.,2025-01-29,2025-02-10,itc_in
+NSEEQ-0036,JIOFIN,Jio Financial Services Ltd.,2023-07-20,,jio_in
+NSEEQ-0037,JSWSTEEL,JSW Steel Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0038,KOTAKBANK,Kotak Mahindra Bank Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0039,KWIL,Kwality Wall's (India) Ltd.,2026-02-16,2026-02-24,hul_dummy
+NSEEQ-0040,LT,Larsen & Toubro Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0041,LTIM,LTIMindtree Ltd.,2023-07-13,2024-09-30,hdfc_ltim
+NSEEQ-0042,M&M,Mahindra & Mahindra Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0043,MARUTI,Maruti Suzuki India Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0044,MAXHEALTH,Max Healthcare Institute Ltd.,2025-09-30,,sep2025
+NSEEQ-0045,NESTLEIND,Nestle India Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0046,NTPC,NTPC Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0047,ONGC,Oil and Natural Gas Corporation Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0048,POWERGRID,Power Grid Corporation of India Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0049,RELIANCE,Reliance Industries Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0050,SBILIFE,SBI Life Insurance Company Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0051,SBIN,State Bank of India,2023-01-01,,sebi_dec2022
+NSEEQ-0052,SHRIRAMFIN,Shriram Finance Ltd.,2024-03-28,,mar2024
+NSEEQ-0053,SUNPHARMA,Sun Pharmaceutical Industries Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0054,TATACONSUM,Tata Consumer Products Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0055,TATAMOTORS,Tata Motors Ltd.,2023-01-01,2025-10-24,sebi_dec2022
+NSEEQ-0055,TMPV,Tata Motors Passenger Vehicles Ltd.,2025-10-24,,tata_symbol_change
+NSEEQ-0056,TATASTEEL,Tata Steel Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0057,TCS,Tata Consultancy Services Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0058,TECHM,Tech Mahindra Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0059,TITAN,Titan Company Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0060,TMCV,Tata Motors Commercial Vehicles Ltd.,2025-11-12,2025-11-17,tata_listed
+NSEEQ-0061,TRENT,Trent Ltd.,2024-09-30,,sep2024
+NSEEQ-0062,ULTRACEMCO,UltraTech Cement Ltd.,2023-01-01,,sebi_dec2022
+NSEEQ-0063,UPL,UPL Ltd.,2023-01-01,2024-03-28,sebi_dec2022
+NSEEQ-0064,WIPRO,Wipro Ltd.,2023-01-01,2026-09-30,sebi_dec2022
+NSEEQ-0065,ZOMATO,Zomato Ltd.,2025-03-28,2025-04-09,mar2025
+NSEEQ-0065,ETERNAL,Eternal Ltd.,2025-04-09,,zomato_rename

@@ -1,0 +1,26 @@
+source_id,url,description,announcement_date
+sebi_dec2022,https://www.sebi.gov.in/sebi_data/attachdocs/feb-2023/1677136238206.pdf,"SEBI January 2023 Bulletin, Table 25, component stocks during December 2022",2023-02-23
+nifty_methodology,https://www.niftyindices.com/Methodology/Method_NIFTY_Equity_Indices.pdf,NIFTY equity index methodology,
+nifty_rebalance_calendar,https://www.niftyindices.com/resources/index-rebalancing-schedule,Official index reconstitution calendar,
+hdfc_ltim,https://www.niftyindices.com/Press_Release/ind_prs04072023.pdf,HDFC exit and LTIMindtree inclusion,2023-07-04
+jio_in,https://www.niftyindices.com/Press_Release/ind_prs17072023.pdf,Jio Financial demerger inclusion announcement,2023-07-17
+jio_out,https://www.niftyindices.com/Press_Release/ind_prs05092023.pdf,Jio Financial exclusion announcement,2023-09-05
+mar2024,https://www.niftyindices.com/Press_Release/ind_prs28022024.pdf,March 2024 periodic NIFTY 50 review,2024-02-28
+sep2024,https://www.niftyindices.com/Press_Release/ind_prs23082024.pdf,September 2024 periodic NIFTY 50 review,2024-08-23
+itc_in,https://www.niftyindices.com/Press_Release/ind_prs30122024.pdf,ITC Hotels demerger index placeholder; effective 2025-01-06,2024-12-30
+itc_out,https://www.niftyindices.com/Press_Release/ind_prs06022025_1.pdf,ITC Hotels exclusion announcement,2025-02-06
+mar2025,https://www.niftyindices.com/Press_Release/ind_prs21022025.pdf,March 2025 periodic review: Jio Financial and Zomato inclusion,2025-02-21
+zomato_rename,https://nsearchives.nseindia.com/content/circulars/CML67420.pdf,NSE circular: ZOMATO to ETERNAL effective 2025-04-09,2025-04-03
+sep2025,https://www.niftyindices.com/Press_Release/ind_prs22082025.pdf,September 2025 periodic NIFTY 50 review,2025-08-22
+tata_dummy,https://www.niftyindices.com/Press_Release/ind_prs07102025.pdf,Tata Motors demerger index placeholder,2025-10-07
+tata_listed,https://www.niftyindices.com/Press_Release/ind_prs13112025.pdf,Tata Motors Commercial Vehicles corporate-action constituent,2025-11-13
+hul_dummy,https://www.niftyindices.com/Press_Release/ind_prs28112025.pdf,HUL ice-cream demerger index placeholder,2025-11-28
+kwil_out,https://www.niftyindices.com/Press_Release/ind_prs20022026_1.pdf,Kwality Wall's corporate-action constituent removal,2026-02-20
+mar2026,https://www.niftyindices.com/Press_Release/ind_prs23022026.pdf,March 2026 periodic review; no NIFTY 50 replacement,2026-02-23
+sep2026,https://www.niftyindices.com/Press_Release/ind_prs10082026.pdf,September 2026 periodic review: Wipro exit and BSE inclusion,2026-08-10
+nifty_current,https://www.niftyindices.com/IndexConstituent/ind_nifty50list.csv,Official current constituent-list endpoint recorded for a separate current-universe view. The local 2026-09-23 snapshot is frozen from the reviewed effective-dated ledger; it is not an implicit PIT fallback.,2026-09-23
+kite_snapshot_2026-09-23,local:data/raw/instruments/nse_instruments_2026-09-23.csv,Existing local Kite/NSE instrument snapshot; proves only snapshot-date mappings,2026-09-23
+nse_zomato_isin,https://nsearchives.nseindia.com/corporate/ZOMATO_06022025170452_Zomatonamechangesigned.pdf,NSE-filed issuer disclosure validating ISIN INE758T01015 for Zomato/Eternal equity,2025-02-06
+tata_symbol_change,https://nsearchives.nseindia.com/content/circulars/CML70875.pdf,NSE circular: TATAMOTORS renamed/re-symbolled TMPV effective 2025-10-24,2025-10-16
+tata_pv_isin,https://nsearchives.nseindia.com/corporate/ixbrl/INTEGRATED_FILING_INDAS_185694_12082026161937_iXBRL_WEB.html,NSE-filed company disclosure validating TMPV ISIN INE155A01022,2026-08-12
+nse_itc_hotels_listing,https://nsearchives.nseindia.com/web/sites/default/files/2025-01/PR_list_27012025.pdf,"NSE listing notice for ITC Hotels, including symbol, company name, and ISIN INE379A01028",2025-01-27
