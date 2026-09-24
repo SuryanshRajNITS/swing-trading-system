@@ -65,6 +65,30 @@ backtest:
     nearby_resistance_atr: 0.75
     nearby_support_atr: 1.5
     resistance_breakout_exception: true
+  weekly_regime:
+    minimum_completed_weeks: 26
+    close_trend_weeks: 13
+    short_return_weeks: 4
+    long_return_weeks: 13
+    slope_weeks: 13
+    atr_weeks: 14
+    minimum_trend_efficiency: 0.15
+    bullish_vote_threshold: 4
+    weak_vote_threshold: 4
+    minimum_return_4w: 0.0
+    minimum_return_13w: 0.0
+    minimum_slope_pct_per_week: 0.0
+    minimum_directional_move_atr: 0.0
+  structural_exit:
+    default_mode: FIXED_R_EXIT
+    stop_buffer_atr: 0.25
+    minimum_stop_buffer_pct: 0.001
+    target_buffer_atr: 0.10
+    minimum_target_buffer_pct: 0.001
+    minimum_reward_risk: 1.5
+    maximum_holding_sessions: 15
+    no_target_policy: REJECT
+    fallback_reward_risk: 2.0
   transaction_costs:
     # Current official Zerodha/NSE delivery assumptions, checked 2026-09-24.
     # Proportional amounts are fractions of turnover; DP includes its GST.

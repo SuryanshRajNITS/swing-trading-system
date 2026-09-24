@@ -219,7 +219,16 @@ class BacktestEngine:
             net = gross - total_cost
             index = session_index[day]
             holding = index - position.entry_session_index + 1
+            if reason == "TIME_EXIT":
+                holding = int(position.metadata.get("maximum_holding_sessions", holding))
             executed_at = exit_timestamp or datetime.combine(day, time(15, 30), tzinfo=zone)
+            trade_metadata={**position.metadata,"reason_codes":list(position.reason_codes),
+                            "exit_time_resolution":"DAILY_BAR; 15:30 is the bar label, not inferred intraday execution time"}
+            if reason == "TIME_EXIT":
+                trade_metadata["time_exit"]={"holding_sessions":holding,"gross_pnl":gross,
+                                              "net_pnl":net,"R_multiple":net/position.initial_risk_rupees
+                                              if position.initial_risk_rupees else 0.0,
+                                              "profitable":net>0}
             trades.append(TradeRecord(
                 trade_id=f"{strategy.name}:{len(trades) + 1:06d}",
                 strategy_version=position.strategy_version, security_id=position.security_id,
@@ -234,8 +243,7 @@ class BacktestEngine:
                 costs=total_cost, net_pnl=net,
                 R_multiple=net / position.initial_risk_rupees if position.initial_risk_rupees else 0.0,
                 holding_period=holding,
-                metadata={**position.metadata, "reason_codes": list(position.reason_codes),
-                          "exit_time_resolution": "DAILY_BAR; 15:30 is the bar label, not inferred intraday execution time"},
+                metadata=trade_metadata,
                 cost_breakdown={
                     "entry": position.entry_costs.total,
                     "exit": exit_costs.total,
@@ -280,6 +288,30 @@ class BacktestEngine:
                 if target_r <= 0:
                     raise BacktestError("A signal target_r must be positive.")
                 target_price = fill + (fill - signal.stop_price) * target_r
+            actual_minimum_rr = signal.metadata.get("actual_minimum_reward_risk")
+            if actual_minimum_rr is not None:
+                structural = signal.metadata.get("structural_exit", {})
+                actual_risk = fill-float(signal.stop_price)
+                actual_reward = (float(target_price)-fill) if target_price is not None else None
+                if actual_risk <= 0:
+                    reason_code = "ACTUAL_ENTRY_AT_OR_BELOW_STRUCTURAL_STOP"
+                elif actual_reward is None or actual_reward <= 0:
+                    reason_code = "ACTUAL_ENTRY_AT_OR_ABOVE_STRUCTURAL_TARGET"
+                else:
+                    actual_rr = actual_reward/actual_risk
+                    reason_code = ("ACTUAL_RR_BELOW_MINIMUM"
+                                   if actual_rr < float(actual_minimum_rr) else None)
+                if reason_code is not None:
+                    events.append(BacktestEvent(datetime.combine(day,time(9,15),tzinfo=zone),
+                        "ENTRY_REJECTED",signal.security_id,
+                        {"reason":reason_code,"reason_code":reason_code,"fill_price":fill,
+                         "stop_price":signal.stop_price,"target_price":target_price,
+                         "actual_risk":actual_risk,"actual_reward":actual_reward,
+                         "actual_reward_risk_ratio":(actual_reward/actual_risk
+                             if actual_reward is not None and actual_risk>0 else None),
+                         "minimum_reward_risk":float(actual_minimum_rr),
+                         "structural_target_zone_id":structural.get("target_resistance_zone_id")}))
+                    return
             if target_price is not None and target_price <= fill:
                 events.append(BacktestEvent(datetime.combine(day, time(9, 15), tzinfo=zone),
                     "ENTRY_REJECTED", signal.security_id, {"reason": "target is not above executable entry"}))
@@ -347,7 +379,8 @@ class BacktestEngine:
                 if candle is None:
                     raise BacktestError(f"Missing exit-day candle for {signal.security_id} on {day}.")
                 execute_exit(position, day=day, raw_price=candle["open"],
-                             reason=f"STRATEGY_EXIT:{signal.reason_code}",
+                             reason=("TIME_EXIT" if signal.reason_code=="TIME_EXIT"
+                                     else f"STRATEGY_EXIT:{signal.reason_code}"),
                              exit_timestamp=datetime.combine(day, time(9, 15), tzinfo=zone))
 
             # Use opening prices to value remaining holdings and resolve overnight

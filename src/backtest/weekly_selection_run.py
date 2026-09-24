@@ -15,12 +15,14 @@ from src.backtest.data import BacktestDataError, load_daily_dataset_through
 from src.backtest.engine import BacktestEngine
 from src.backtest.models import BacktestConfig, CostModel, OperatingCostModel
 from src.backtest.strategy_run import _jsonable, build_research_report
+from src.backtest.structural_exit_report import build_structural_exit_diagnostics
 from src.backtest.sr_zone_v2_run import END, START
 from src.configuration import DEFAULT_SETTINGS_PATH, PROJECT_ROOT, load_settings
 from src.data.universe.provider import PIT_TRADABLE
 from src.strategy.sr_baseline import SRBaselineConfig
 from src.strategy.sr_zone_v2 import SRZoneV2Strategy, ZoneConfig
 from src.strategy.weekly_selection import WeeklySelectionConfig, WeeklySelectionStrategy
+from src.strategy.structural_exit import StructuralExitConfig, StructuralExitStrategy
 
 
 def load_nifty_benchmark(path: str|Path, *, start: date= date(2022,7,1), end: date=END) -> list[dict[str,Any]]:
@@ -74,6 +76,7 @@ def load_nifty_benchmark(path: str|Path, *, start: date= date(2022,7,1), end: da
 
 
 def run_research(*, benchmark_path: str|Path|None=None,
+                 exit_mode: str|None=None,
                  settings_path: str|Path=DEFAULT_SETTINGS_PATH,
                  manifest_path: str|Path=PROJECT_ROOT/"data/processed/market_data_manifest.csv",
                  data_root: str|Path=PROJECT_ROOT/"data/processed/market_data",
@@ -102,6 +105,15 @@ def run_research(*, benchmark_path: str|Path|None=None,
     unknown=set(selection_raw)-selection_allowed-{"version","benchmark_path"}
     if unknown: raise ValueError(f"Unknown weekly-selection settings: {', '.join(sorted(unknown))}.")
     selection_config=WeeklySelectionConfig(**{k:v for k,v in selection_raw.items() if k in selection_allowed})
+    structural_raw=bt.get("structural_exit",{})
+    structural_allowed=set(StructuralExitConfig.__dataclass_fields__)
+    unknown_structural=set(structural_raw)-structural_allowed-{"default_mode"}
+    if unknown_structural:
+        raise ValueError(f"Unknown structural-exit settings: {', '.join(sorted(unknown_structural))}.")
+    selected_exit_mode=(exit_mode or structural_raw.get("default_mode","FIXED_R_EXIT")).upper()
+    if selected_exit_mode not in {"FIXED_R_EXIT","STRUCTURAL_EXIT"}:
+        raise ValueError("exit_mode must be FIXED_R_EXIT or STRUCTURAL_EXIT.")
+    structural_config=StructuralExitConfig(**{k:v for k,v in structural_raw.items() if k in structural_allowed})
     costs_raw=bt.get("transaction_costs",{})
     costs=CostModel(brokerage_rate=float(costs_raw.get("brokerage_rate",0)),
                     stt_buy_rate=float(costs_raw.get("stt_buy_rate",.001)),
@@ -125,10 +137,16 @@ def run_research(*, benchmark_path: str|Path|None=None,
     daily_strategy=SRZoneV2Strategy(config=daily_config,setup="both",target_r=2.0,weekly_filter=False,
                                     evaluation_start=START,zone_config=zone_config)
     selection=WeeklySelectionStrategy(daily_strategy=daily_strategy,benchmark_daily=benchmark,config=selection_config)
-    result=BacktestEngine(config=config).run(strategy=selection,daily_data=daily,dataset_version=dataset_version)
-    report=build_research_report(result,selection)
-    report["research_controls"]={"period":[START.isoformat(),END.isoformat()],"strategy_version":selection.version,
-                                 "daily_strategy":"sr_zone_v2","setup":"both","target_r":2.0,
+    structural_strategy=(StructuralExitStrategy(signal_strategy=selection,config=structural_config)
+                         if selected_exit_mode=="STRUCTURAL_EXIT" else None)
+    strategy=structural_strategy or selection
+    result=BacktestEngine(config=config).run(strategy=strategy,daily_data=daily,dataset_version=dataset_version)
+    report=build_research_report(result,strategy)
+    report["research_controls"]={"period":[START.isoformat(),END.isoformat()],"strategy_version":strategy.version,
+                                 "weekly_selection_version":selection.version,
+                                 "daily_strategy":"sr_zone_v2","setup":"both",
+                                 "target_r":2.0 if selected_exit_mode=="FIXED_R_EXIT" else None,
+                                 "exit_mode":selected_exit_mode,
                                  "simple_weekly_filter":False,"cost_scenario":costs.scenario,"slippage_bps":0,
                                  "outside_period_data_parsed":False,"benchmark_file":str(configured_path),
                                  "benchmark_source":"User-provided official NIFTY 50 historical PR CSV files, combined for 2023 and 2024",
@@ -141,8 +159,12 @@ def run_research(*, benchmark_path: str|Path|None=None,
     report["selection_decisions"]=selection.decisions
     report["selection_signal_decisions"]=selection.signal_decisions
     report["weekly_selection_snapshots"]=selection.weekly_snapshots
+    if structural_strategy is not None:
+        report["structural_exit_diagnostics"]=build_structural_exit_diagnostics(result,structural_strategy)
     output=Path(output_directory); output.mkdir(parents=True,exist_ok=True)
-    path=output/"sr_zone_v2_weekly_selection_r1_2023_2024.json"
+    filename=("sr_zone_v2_weekly_selection_r1_2023_2024.json" if selected_exit_mode=="FIXED_R_EXIT"
+              else "sr_zone_v2_weekly_selection_structural_exit_2023_2024.json")
+    path=output/filename
     temp=path.with_suffix(".json.tmp")
     temp.write_text(json.dumps(_jsonable(report),indent=2,sort_keys=True,allow_nan=False),encoding="utf-8")
     temp.replace(path)
@@ -152,16 +174,19 @@ def run_research(*, benchmark_path: str|Path|None=None,
 def main() -> None:
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--benchmark",type=Path,help="Official bounded NIFTY 50 daily index CSV.")
+    parser.add_argument("--exit-mode",choices=("FIXED_R_EXIT","STRUCTURAL_EXIT"),
+                        help="Use the original fixed 2R exit or the experimental structural exit framework.")
     parser.add_argument("--settings",type=Path,default=DEFAULT_SETTINGS_PATH)
     parser.add_argument("--manifest",type=Path,default=PROJECT_ROOT/"data/processed/market_data_manifest.csv")
     parser.add_argument("--data-root",type=Path,default=PROJECT_ROOT/"data/processed/market_data")
     parser.add_argument("--output-directory",type=Path,default=PROJECT_ROOT/"data/processed/backtests/weekly_selection")
     args=parser.parse_args()
     try:
-        report,path=run_research(benchmark_path=args.benchmark,settings_path=args.settings,
+        report,path=run_research(benchmark_path=args.benchmark,exit_mode=args.exit_mode,settings_path=args.settings,
                                  manifest_path=args.manifest,data_root=args.data_root,output_directory=args.output_directory)
     except (ValueError,OSError,BacktestDataError) as error: parser.error(str(error))
     print(json.dumps({"artifact":str(path),"period":report["research_controls"]["period"],
+                      "exit_mode":report["research_controls"]["exit_mode"],
                       "trades":report["metrics"]["number_of_trades"],
                       "weekly_snapshots":len(report["weekly_selection_snapshots"])},indent=2))
 
