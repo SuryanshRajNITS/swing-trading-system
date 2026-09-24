@@ -81,6 +81,16 @@ class BrokerInstrument:
 
 
 @dataclass(frozen=True)
+class SymbolInterval:
+    security_id: str
+    symbol: str
+    company_name: str | None
+    effective_from: date
+    effective_to: date | None
+    source_id: str
+
+
+@dataclass(frozen=True)
 class UniverseEvent:
     event_type: str
     universe_id: str
@@ -206,6 +216,66 @@ class UniverseProvider:
             )
         return matches[0]["symbol"]
 
+    def latest_symbol_for(self, security_id: str) -> SymbolInterval:
+        """Return the latest evidenced symbol for an identity, independent of index membership."""
+        rows = self.symbol_history_over(security_id, date.min, date.max)
+        if not rows:
+            raise UniverseCoverageError(f"No symbol history exists for {security_id}.")
+        latest_start = max(item.effective_from for item in rows)
+        latest = [item for item in rows if item.effective_from == latest_start]
+        if len(latest) != 1:
+            raise UniverseCoverageError(f"No unique latest symbol exists for {security_id}.")
+        return latest[0]
+
+    def security_identity_for(self, security_id: str) -> tuple[str | None, str | None]:
+        """Return (ISIN, identity source ID) for continuity checks."""
+        row = self._securities.get(security_id)
+        if row is None:
+            raise UniverseCoverageError(f"No stable security identity exists for {security_id}.")
+        return row.get("isin") or None, row.get("identity_source_id") or None
+
+    def symbol_history_over(self, security_id: str, start_date: date, end_date: date) -> list[SymbolInterval]:
+        """Return source-backed symbol intervals intersecting a date range."""
+        if start_date > end_date:
+            raise ValueError("start_date must not be later than end_date")
+        result = []
+        for row in self._symbols:
+            if row["security_id"] != security_id:
+                continue
+            start = _parse_date(row["effective_from"], field="effective_from")
+            end = _parse_date(row["effective_to"], field="effective_to", allow_empty=True)
+            assert start is not None
+            if start > end_date or (end is not None and end <= start_date):
+                continue
+            result.append(SymbolInterval(
+                security_id=security_id, symbol=row["symbol"],
+                company_name=row["company_name"] or None, effective_from=start,
+                effective_to=end, source_id=row["source_id"],
+            ))
+        return sorted(result, key=lambda item: item.effective_from)
+
+    def identity_events_over(
+        self, security_id: str, start_date: date, end_date: date,
+    ) -> list[UniverseEvent]:
+        """Return explicitly recorded security identity events in a date interval."""
+        if start_date > end_date:
+            raise ValueError("start_date must not be later than end_date")
+        events = []
+        for row in self._events:
+            effective = _parse_date(row["effective_date"], field="effective_date")
+            assert effective is not None
+            if (row["security_id"] != security_id or row["universe_id"] != "SECURITY_IDENTITY"
+                    or not start_date <= effective <= end_date):
+                continue
+            events.append(UniverseEvent(
+                event_type=row["event_type"], universe_id=row["universe_id"],
+                security_id=security_id,
+                announcement_date=_parse_date(row["announcement_date"], field="announcement_date", allow_empty=True),
+                effective_date=effective, from_symbol=row["from_symbol"] or None,
+                to_symbol=row["to_symbol"] or None, source_id=row["source_id"], notes=row["notes"],
+            ))
+        return sorted(events, key=lambda item: item.effective_date)
+
     def members_on(self, trading_date: date, universe_id: str = PIT_TRADABLE) -> list[Security]:
         self._assert_coverage(trading_date, universe_id)
         result: list[Security] = []
@@ -306,6 +376,38 @@ class UniverseProvider:
             effective_to=_parse_date(row["effective_to"], field="effective_to", allow_empty=True),
             source_id=row["source_id"],
         )
+
+    def broker_instruments_over(
+        self, security_id: str, start_date: date, end_date: date,
+        *, broker: str = "kite", exchange: str = "NSE",
+    ) -> list[BrokerInstrument]:
+        """Return explicitly evidenced broker mappings intersecting a date range.
+
+        The returned intervals retain their reference-data effective bounds. No
+        current-token backdating or symbol fallback is performed.
+        """
+        if start_date > end_date:
+            raise ValueError("start_date must not be later than end_date")
+        matches = []
+        for row in self._broker:
+            if (row["security_id"] != security_id or row["broker"].lower() != broker.lower()
+                    or row["exchange"].upper() != exchange.upper()):
+                continue
+            effective_from = _parse_date(row["effective_from"], field="effective_from")
+            effective_to = _parse_date(row["effective_to"], field="effective_to", allow_empty=True)
+            assert effective_from is not None
+            if effective_from > end_date or (effective_to is not None and effective_to <= start_date):
+                continue
+            # Ensure the identity record agrees at an actually covered date.
+            covered_date = max(start_date, effective_from)
+            if row["tradingsymbol"] != self.symbol_for(security_id, covered_date):
+                raise UniverseDataError("Broker mapping symbol does not match security symbol history.")
+            matches.append(BrokerInstrument(
+                security_id=security_id, broker=row["broker"], exchange=row["exchange"],
+                tradingsymbol=row["tradingsymbol"], instrument_token=int(row["instrument_token"]),
+                effective_from=effective_from, effective_to=effective_to, source_id=row["source_id"],
+            ))
+        return sorted(matches, key=lambda item: item.effective_from)
 
     def unresolved_broker_mappings(
         self, start_date: date, end_date: date, *, broker: str = "kite", exchange: str = "NSE",
