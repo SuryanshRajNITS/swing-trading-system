@@ -35,4 +35,5 @@ data/processed/kite_probe_manifest.csv
 data/processed/backtests/
 logs/
 .pytest_tmp/
+.pytest_tmp_*/
 ..pytest_tmp/

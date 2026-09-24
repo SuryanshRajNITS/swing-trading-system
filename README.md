@@ -6,9 +6,7 @@ This project is being developed as a research-first, backtest-first, and paper-t
 
 ## Current status
 
-Milestone 1 provides the project foundation: settings loading and validation, basic logging, and a minimal SQLite initialization/health check. The deterministic trading strategy and backtesting engine have not been implemented.
-
-The repository includes manual Kite Connect authentication, read-only session verification, NSE instrument snapshots, historical candle access, and a date-aware point-in-time NIFTY 50 universe. A resumable daily PIT dataset builder, official NSE daily CSV importer, and deterministic event-driven backtest foundation are available. The real swing strategy, paper/live execution, 60-minute and 15-minute bulk data, and broker orders are not implemented. Live trading is disabled by default (`trading_mode: paper` and `live_trading_enabled: false`).
+The project foundation, read-only Kite Connect integration, point-in-time daily NIFTY 50 dataset, deterministic backtest engine, and first daily-only research hypothesis (`sr_baseline_v1`) are available. The baseline is development research, not a validated trading strategy. Hourly/15-minute data and logic, paper/live execution, and broker orders are not implemented. Live trading is disabled by default (`trading_mode: paper` and `live_trading_enabled: false`).
 
 ## Architecture
 
@@ -154,3 +152,46 @@ python -m pytest
 ```
 
 The tests cover settings and safety defaults, SQLite initialization/health, mocked Kite authentication/session and historical-data behavior, instrument validation, daily market-data provenance/validation, historical probes, official NSE CSV parsing, weekly close-time look-ahead protection, and the synthetic portfolio/event-driven backtest foundation. The smoke strategy is not the production strategy.
+
+### First strategy research baseline
+
+`sr_baseline_v1` is the first deterministic strategy hypothesis. It implements two daily-only setup types: a repeated support test and a resistance breakout followed by a retest. Both require a confirmed swing-derived price zone; swing pivots become visible only after their configured right-hand bars have completed. Nearby same-side pivots are clustered by the configured percentage tolerance. Support signals require an earlier, separated touch followed by a reaction, then a fresh revisit whose close is at/above zone center with a minimum close-location score. Breakout signals require a close above a resistance zone plus threshold; optional volume confirmation is calculated against the previous N sessions. A later retest must return near the frozen breakout zone, remain above the invalidation boundary, and close above zone center with a minimum close-location score. Breakouts time out after the configured number of sessions. Same-day simultaneous setup signals for one security are both rejected as `MULTIPLE_SETUP_CONFLICT`.
+
+Support stops are below the support-zone lower bound by a configurable price-percentage buffer. Breakout-retest stops are below the lower of the retest low and reclaimed zone lower bound, also with a configurable buffer. Signals execute at the next session open. The 1.5R/2R/2.5R/3R target is calculated from the executable next-session fill and structural stop. The existing engine resolves daily-bar stop/target ambiguity stop-first. A separately switchable weekly filter uses only calendar weeks before the signal's current week; it requires the latest such weekly close above its configurable trailing weekly close average and, by default, above the preceding weekly close. This deliberately avoids current-week Friday-close leakage.
+
+All strategy parameters live under `backtest.strategy` in `config/settings.yaml`. The research CLI is locked to 2023-01-01 through 2024-12-31; it parses only the dated prefix through 2024-12-31 and does not load/hash later daily candles. Later validation and final-OOS performance must not be used to adjust this baseline. The default cost scenario is the current Zerodha delivery schedule; slippage can be run separately at 0, 5, or 10 bps. Results are research observations and do not establish profitability.
+
+Examples (run separately; all outputs are saved under ignored `data/processed/backtests/sr_baseline_v1/`):
+
+```powershell
+# Support-test only, 2R, daily only
+python -m src.backtest.strategy_run --setup support_test --target-r 2 --weekly-filter off --slippage-bps 0
+
+# Breakout-retest only, 2R, daily only
+python -m src.backtest.strategy_run --setup breakout_retest --target-r 2 --weekly-filter off --slippage-bps 0
+
+# Both setups, 2R, daily only
+python -m src.backtest.strategy_run --setup both --target-r 2 --weekly-filter off --slippage-bps 0
+
+# Combined setup with weekly filter
+python -m src.backtest.strategy_run --setup both --target-r 2 --weekly-filter on --slippage-bps 0
+
+# Target variants: repeat with --target-r 1.5, 2, 2.5, and 3
+python -m src.backtest.strategy_run --setup both --target-r 1.5 --weekly-filter off --slippage-bps 0
+
+# Slippage sensitivity: repeat with --slippage-bps 0, 5, and 10
+python -m src.backtest.strategy_run --setup both --target-r 2 --weekly-filter off --slippage-bps 5
+
+# Explicit raw-fee-zero comparator (slippage remains the selected value)
+python -m src.backtest.strategy_run --setup both --target-r 2 --weekly-filter off --slippage-bps 0 --cost-scenario raw_zero
+```
+
+Each JSON result contains run metadata, complete closed-trade ledger, diagnostics and rejection reasons, setup-level summaries, monthly returns, equity curve, R and holding-period distributions, exit counts, largest winners/losers, transaction costs, and fixed-cost economic returns. The output reports open positions separately at the period end.
+
+Generate candle-level failure diagnostics from the saved baseline run (this reads only the 2023-2024 dated dataset prefix and does not rerun the strategy):
+
+```powershell
+python -m src.backtest.sr_diagnostics
+```
+
+The reproducible CSV/JSON diagnostics and their definitions are written under `data/processed/backtests/sr_baseline_v1/diagnostics/` (ignored local research outputs).

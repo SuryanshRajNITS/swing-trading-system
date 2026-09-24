@@ -288,6 +288,26 @@ def test_smoke_strategy_is_explicitly_exercisable_not_a_trading_claim() -> None:
     assert not result.open_positions
 
 
+def test_target_r_is_resolved_from_the_actual_next_session_fill() -> None:
+    days = (date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4))
+    engine, data, _ = setup(days=days)
+    data["A"][0] = candle(days[0], low=99)
+    data["A"][1] = candle(days[1], opening=103, high=105, low=100, close=104)
+    data["A"][2] = candle(days[2], opening=103, high=120, low=100, close=119)
+
+    class TargetR(SignalStrategy):
+        def generate_entries(self, context):
+            if context.session_date == days[0]:
+                return [EntrySignal("A", "A", context.timestamp, context.next_session_open,
+                                    95, metadata={"target_r": 2.0})]
+            return ()
+
+    result = engine.run(strategy=TargetR({}), daily_data=data)
+    assert result.trades[0].entry_price == 103
+    assert result.trades[0].exit_reason == "TARGET"
+    assert result.trades[0].exit_price == 119
+
+
 def test_requested_period_must_be_covered_at_both_ends() -> None:
     days = (date(2022, 7, 1), date(2022, 7, 4), date(2022, 7, 5))
     engine, data, _ = setup(days=days)

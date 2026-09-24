@@ -273,7 +273,14 @@ class BacktestEngine:
                 raise BacktestError(f"Missing execution-day candle for eligible {signal.security_id} on {day}.")
             raw_open = candle["open"]
             fill = self.config.costs.fill_price(raw_open, side="buy")
-            if signal.target_price is not None and signal.target_price <= fill:
+            target_price = signal.target_price
+            target_r = signal.metadata.get("target_r")
+            if target_r is not None:
+                target_r = float(target_r)
+                if target_r <= 0:
+                    raise BacktestError("A signal target_r must be positive.")
+                target_price = fill + (fill - signal.stop_price) * target_r
+            if target_price is not None and target_price <= fill:
                 events.append(BacktestEvent(datetime.combine(day, time(9, 15), tzinfo=zone),
                     "ENTRY_REJECTED", signal.security_id, {"reason": "target is not above executable entry"}))
                 return
@@ -308,7 +315,7 @@ class BacktestEngine:
                 security_id=signal.security_id, symbol=security.symbol,
                 entry_timestamp=entry_timestamp, entry_price=fill, raw_entry_price=raw_open,
                 quantity=quantity,
-                initial_stop=signal.stop_price, target_price=signal.target_price,
+                initial_stop=signal.stop_price, target_price=target_price,
                 initial_risk_rupees=risk_per_share * quantity,
                 initial_r_distance=risk_per_share, entry_costs=entry_cost,
                 entry_slippage_cost=entry_slippage,

@@ -15,7 +15,56 @@ timezone: Asia/Kolkata
 
 backtest:
   max_open_positions: 10
-  smoke_target_r: 2.0
+  strategy:
+    version: sr_baseline_v1
+    swing_left: 3
+    swing_right: 3
+    zone_tolerance_pct: 0.01
+    minimum_zone_pivots: 2
+    maximum_zone_age_sessions: 252
+    minimum_touch_separation_sessions: 5
+    support_min_close_location: 0.65
+    support_max_penetration_pct: 1.0
+    zone_break_close_buffer_pct: 0.005
+    support_stop_buffer_pct: 0.002
+    breakout_distance_pct: 0.002
+    retest_tolerance_pct: 0.01
+    maximum_retest_sessions: 20
+    breakout_invalidation_pct: 0.01
+    breakout_minimum_touches: 2
+    breakout_min_close_location: 0.60
+    breakout_stop_buffer_pct: 0.002
+    volume_lookback_sessions: 20
+    volume_ratio_threshold: null
+    weekly_sma_weeks: 4
+    weekly_require_higher_close: true
+    target_r_variants: [1.5, 2.0, 2.5, 3.0]
+    weekly_filter_default: false
+  strategy_zone_v2:
+    version: sr_zone_v2
+    atr_period: 14
+    atr_half_width: 0.5
+    minimum_width_pct: 0.0025
+    maximum_width_pct: 0.01
+    cluster_distance_atr: 0.75
+    departure_atr: 0.5
+    reaction_horizon: 5
+    break_atr: 0.5
+  weekly_selection:
+    version: sr_zone_v2_weekly_selection_v1
+    benchmark_path: data/raw/reference/nifty50_daily.csv
+    minimum_completed_weeks: 26
+    short_return_weeks: 4
+    long_return_weeks: 13
+    structure_minimum: 1
+    momentum_minimum: 2
+    relative_strength_minimum: 1
+    total_score_minimum: 5
+    strong_close_location: 0.65
+    minimum_trend_efficiency: 0.15
+    nearby_resistance_atr: 0.75
+    nearby_support_atr: 1.5
+    resistance_breakout_exception: true
   transaction_costs:
     # Current official Zerodha/NSE delivery assumptions, checked 2026-09-24.
     # Proportional amounts are fractions of turnover; DP includes its GST.
