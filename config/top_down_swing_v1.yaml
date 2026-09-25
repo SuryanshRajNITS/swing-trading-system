@@ -1,0 +1,55 @@
+version: top_down_swing_v1
+period:
+  start: 2023-01-01
+  end: 2024-12-31
+  daily_warmup_start: 2022-07-01
+  hourly_warmup_start: 2022-10-01
+weekly:
+  approach_distance_atr: 1.5
+  mid_range_lower_fraction: 0.35
+  mid_range_upper_fraction: 0.65
+  swing_left: 2
+  swing_right: 2
+  meaningful_touch_episodes: 2
+  major_touch_episodes: 4
+  meaningful_reaction_atr: 0.5
+  major_reaction_atr: 1.0
+  meaningful_recency_bars: 130
+  major_recency_bars: 65
+  meaningful_pivots: 2
+  departure_atr: 0.5
+  reaction_horizon: 5
+  actionable_support_distance_atr: 1.5
+  actionable_resistance_distance_atr: 1.0
+  context_min_completed_weeks: 26
+  context_min_rs_weeks: 13
+daily:
+  swing_left: 3
+  swing_right: 3
+  minimum_zone_pivots: 2
+  maximum_age: 252
+  approach_distance_atr: 1.0
+  support_reaction_close_location: 0.60
+  breakout_retest_max_sessions: 20
+  departure_atr: 0.5
+  reaction_horizon: 5
+hourly:
+  swing_left: 3
+  swing_right: 3
+  minimum_zone_pivots: 2
+  maximum_age: 130
+  confirmation_expiry_sessions: 10
+  consolidation_bars: 6
+  stop_buffer_atr: 0.15
+  zone_acceptance_closes: 2
+  zone_break_buffer_atr: 0.1
+  departure_atr: 0.5
+  reaction_horizon: 5
+ema_context:
+  confluence_distance_atr: 0.25
+risk:
+  initial_capital: 10000
+  risk_fraction: 0.01
+  max_open_positions: 10
+  minimum_room_r: 1.5
+  no_resistance_fallback_r: 2.0

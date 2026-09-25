@@ -66,6 +66,13 @@ class Zone:
     role_flip: str | None
     freshness: str
     merged_ids: tuple[str, ...] = ()
+    original_side: str | None = None
+    role_state: str = "ACTIVE"
+    acceptance_close_count: int = 0
+    reaction_count: int = 0
+    mean_reaction_atr: float | None = None
+    last_touch_index: int | None = None
+    strength: str = "MINOR"
 
     def as_price_zone(self, first_index: int, last_index: int) -> PriceZone:
         return PriceZone(self.side, self.center, self.lower_bound, self.upper_bound,
