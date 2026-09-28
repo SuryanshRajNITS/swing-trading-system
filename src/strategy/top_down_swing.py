@@ -47,6 +47,7 @@ class TopDownConfig:
     context_min_rs_weeks: int = 13
     no_resistance_fallback_r: float = 2.0
     ema_confluence_distance_atr: float = 0.25
+    require_valid_hourly_zones_for_confirmation: bool = False
     weekly_zone: ZoneConfig = ZoneConfig(swing_left=2, swing_right=2, minimum_pivots=2,
                                           maximum_age=104, minimum_width_pct=0.003,
                                           maximum_width_pct=0.02)
@@ -362,7 +363,10 @@ def structural_location(zones: Sequence[Zone], price: float, current_atr: float,
               "nearest_resistance": _zone_dict(resistance, price, current_atr),
               "support_distance_atr": sd, "resistance_distance_atr": rd,
               "structural_stop": stop, "structural_risk": risk,
-              "structural_reward": reward, "structural_rr": rr}
+              "structural_reward": reward, "structural_rr": rr,
+              "structural_position_fraction": ((price-support.upper_bound)/
+                  (resistance.lower_bound-support.upper_bound)
+                  if support and resistance and resistance.lower_bound > support.upper_bound else None)}
     if support and sd is not None and sd <= cfg.actionable_support_distance_atr and rr is not None and rr >= cfg.minimum_room_r:
         return "SUPPORT_LOCATION_ACTIONABLE", values
     if resistance and rd is not None and rd <= cfg.actionable_resistance_distance_atr and (rr is None or rr < cfg.minimum_room_r):
@@ -523,10 +527,16 @@ def evaluate_daily_candidate(*, security_id: str, symbol: str,
         if location in {"APPROACHING_SUPPORT", "APPROACHING_RESISTANCE"} or daily_nearby:
             state = "APPROACHING_ZONE"
 
+    weekly_swings = find_confirmed_swings(weekly_rows, left=cfg.weekly_zone.swing_left,
+                                          right=cfg.weekly_zone.swing_right)
+    weekly_lows = [s.price for s in weekly_swings if s.kind == "support" and
+                   s.confirmation_index < len(weekly_rows)]
+    weekly_highs = [s.price for s in weekly_swings if s.kind == "resistance" and
+                    s.confirmation_index < len(weekly_rows)]
     daily_swings = find_confirmed_swings(daily_rows, left=cfg.daily_zone.swing_left,
                                          right=cfg.daily_zone.swing_right)
-    lows = [s.price for s in daily_swings if s.kind == "support" and s.confirmation_index < len(daily_rows)]
-    highs = [s.price for s in daily_swings if s.kind == "resistance" and s.confirmation_index < len(daily_rows)]
+    daily_lows = [s.price for s in daily_swings if s.kind == "support" and s.confirmation_index < len(daily_rows)]
+    daily_highs = [s.price for s in daily_swings if s.kind == "resistance" and s.confirmation_index < len(daily_rows)]
     output = {
         "date": day, "security_id": security_id, "symbol": symbol,
         "state": state, "setup_type": setup, "reason_codes": sorted(set(reasons)),
@@ -546,13 +556,18 @@ def evaluate_daily_candidate(*, security_id: str, symbol: str,
                                    "STRUCTURAL_LOCATION_EXCEPTION" if exception_location else None),
         "weekly_location": location, "weekly_location_components": location_values,
         "daily_location": daily_location, "daily_location_components": daily_location_values,
-        "structural_range_position": daily_location,
-        "weekly_structure": {"higher_high": len(highs) >= 2 and highs[-1] > highs[-2],
-                             "higher_low": len(lows) >= 2 and lows[-1] > lows[-2],
+        "structural_range_position": daily_location_values.get("structural_position_fraction"),
+        "structural_location_category": daily_location,
+        "weekly_range_position_fraction": location_values.get("range_location_fraction"),
+        "weekly_structure": {"higher_high": len(weekly_highs) >= 2 and weekly_highs[-1] > weekly_highs[-2],
+                             "higher_low": len(weekly_lows) >= 2 and weekly_lows[-1] > weekly_lows[-2],
                              "selector_higher_high": weekly_structure["higher_high"],
                              "selector_higher_low": weekly_structure["higher_low"],
                              "selector_structure_score": weekly_structure["structure_score"],
-                             "confirmed_swing_highs": len(highs), "confirmed_swing_lows": len(lows)},
+                             "confirmed_swing_highs": len(weekly_highs), "confirmed_swing_lows": len(weekly_lows)},
+        "daily_structure": {"higher_high": len(daily_highs) >= 2 and daily_highs[-1] > daily_highs[-2],
+                            "higher_low": len(daily_lows) >= 2 and daily_lows[-1] > daily_lows[-2],
+                            "confirmed_swing_highs": len(daily_highs), "confirmed_swing_lows": len(daily_lows)},
         "weekly_zones": weekly_context, "daily_zones": daily_context,
         "daily_atr": d_atr, "weekly_atr": w_atr,
         "daily_ema50": ema(daily_rows, 50), "daily_ema200": ema(daily_rows, 200),
@@ -580,14 +595,38 @@ def evaluate_daily_candidate(*, security_id: str, symbol: str,
 
 def _hourly_pattern(rows: Sequence[Mapping[str, Any]], zones: Sequence[Zone],
                     setup_zone: Mapping[str, Any] | None, consolidation_bars: int,
-                    require_stronger: bool = False, structure_lookback: int = 130) -> tuple[str | None, list[str], dict[str, Any]]:
+                    require_stronger: bool = False, structure_lookback: int = 130,
+                    require_valid_zones: bool = False) -> tuple[str | None, list[str], dict[str, Any]]:
     if not rows:
         return None, ["NO_COMPLETED_HOURLY_BARS"], {}
     current = rows[-1]
     prior = rows[-2] if len(rows) >= 2 else None
     close = float(current["close"])
-    supports = [z for z in zones if z.side == "support"]
-    resistances = [z for z in zones if z.side == "resistance"]
+    def current_role_valid(zone: Zone, side: str) -> bool:
+        role_valid = zone.role_state in {"ACTIVE", "SUPPORT_CONFIRMED" if side == "support" else "RESISTANCE_CONFIRMED"}
+        strength_valid = zone.strength in {"MEANINGFUL", "MAJOR"}
+        break_valid = not zone.broken or zone.role_state == ("SUPPORT_CONFIRMED" if side == "support" else "RESISTANCE_CONFIRMED")
+        return zone.side == side and role_valid and strength_valid and break_valid
+
+    all_supports = [z for z in zones if z.side == "support"]
+    all_resistances = [z for z in zones if z.side == "resistance"]
+    supports = ([z for z in all_supports if current_role_valid(z, "support")]
+                if require_valid_zones else all_supports)
+    resistances = ([z for z in all_resistances if current_role_valid(z, "resistance")]
+                   if require_valid_zones else all_resistances)
+    support_zone_audit = []
+    for zone in all_supports:
+        reason = ("HOURLY_ZONE_TOO_MINOR_FOR_CONFIRMATION" if zone.strength == "MINOR" else
+                  "HOURLY_SUPPORT_ROLE_INVALID_BROKEN" if zone.broken and zone.role_state != "SUPPORT_CONFIRMED" else
+                  "HOURLY_SUPPORT_ROLE_INVALID_CURRENT_ROLE" if zone.role_state not in {"ACTIVE", "SUPPORT_CONFIRMED"} else
+                  "HOURLY_SUPPORT_ROLE_VALID")
+        support_zone_audit.append({"zone_id": zone.zone_id, "side": zone.side,
+            "original_side": zone.original_side, "role_state": zone.role_state,
+            "role_flip": zone.role_flip, "strength": zone.strength,
+            "touch_episodes": len(zone.touch_episodes), "reaction_count": zone.reaction_count,
+            "mean_reaction_atr": zone.mean_reaction_atr, "broken": zone.broken,
+            "eligible_for_support_hold": current_role_valid(zone, "support"),
+            "reason_code": reason})
     values: dict[str, Any] = {"bar_timestamp": str(current["date"]),
                               "bar_volume": float(current["volume"]),
                               **volume_features(rows), "hourly_ema50": ema(rows, 50),
@@ -617,9 +656,13 @@ def _hourly_pattern(rows: Sequence[Mapping[str, Any]], zones: Sequence[Zone],
                    "failed_downside_attempts": bearish_failures,
                    "consolidation": consolidation,
                    "bullish_close": close > float(current["open"]),
+                   "support_zone_eligibility": support_zone_audit,
                    "involved_zones": [{"zone_id": z.zone_id, "role_before": z.original_side,
                        "role_state": z.role_state, "role_flip": z.role_flip,
-                       "strength": z.strength, "timeframe": "HOURLY"} for z in supports+resistances]})
+                       "strength": z.strength, "broken": z.broken,
+                       "touch_episodes": len(z.touch_episodes), "reaction_count": z.reaction_count,
+                       "mean_reaction_atr": z.mean_reaction_atr,
+                       "timeframe": "HOURLY"} for z in supports+resistances]})
     held = [z for z in supports if float(current["low"]) <= z.upper_bound and
             float(current["high"]) >= z.lower_bound and close >= z.upper_bound and close > float(current["open"])]
     strong_sequence = bool(held) and close > float(current["open"]) and higher_low
@@ -637,8 +680,18 @@ def _hourly_pattern(rows: Sequence[Mapping[str, Any]], zones: Sequence[Zone],
         if reclaimed:
             return "RECLAIM_CONFIRMATION", ["HOURLY_ZONE_RECLAIMED"], values
     if held:
-        return "SUPPORT_HOLD_CONFIRMATION", ["HOURLY_SUPPORT_HELD_WITH_BULLISH_CLOSE"], values
+        held_ids = [z.zone_id for z in held]
+        values["held_support_zone_ids"] = held_ids
+        values["held_support_zone_eligibility"] = [row for row in support_zone_audit
+            if row["zone_id"] in held_ids]
+        held_reasons = ["HOURLY_SUPPORT_ROLE_VALID"]
+        if any(z.role_state == "SUPPORT_CONFIRMED" and z.original_side == "resistance" for z in held):
+            held_reasons.append("HOURLY_ROLE_FLIP_CONFIRMED")
+        held_reasons.append("HOURLY_SUPPORT_HELD_WITH_BULLISH_CLOSE")
+        return "SUPPORT_HOLD_CONFIRMATION", held_reasons, values
     if hl_to_hh:
+        if require_valid_zones:
+            return "HIGHER_LOW_HIGHER_HIGH_CONFIRMATION", ["HOURLY_HIGHER_LOW_TO_HIGHER_HIGH"], values
         return "SUPPORT_HOLD_CONFIRMATION", ["HOURLY_HIGHER_LOW_TO_HIGHER_HIGH"], values
     if len(rows) >= consolidation_bars + 1:
         base = rows[-consolidation_bars-1:-1]
@@ -797,7 +850,8 @@ def confirm_hourly(*, hourly_rows: Sequence[Mapping[str, Any]], after_timestamp:
         pattern, reasons, feature_values = _hourly_pattern(prefix, zones, setup_zone,
                                                            cfg.consolidation_bars,
                                                            require_stronger_confirmation,
-                                                           hourly_config.maximum_age)
+                                                           hourly_config.maximum_age,
+                                                           cfg.require_valid_hourly_zones_for_confirmation)
         if not pattern:
             continue
         confirmation = prefix[-1]

@@ -122,7 +122,8 @@ def _episodes(rows: Sequence[Mapping[str, Any]], lower: float, upper: float,
 
 def detect_zones(rows: Sequence[Mapping[str, Any]], *, security_id: str,
                  config: ZoneConfig | None = None, include_lifecycle: bool = True,
-                 confirmed_swings: Sequence[SwingPoint] | None = None) -> tuple[Zone, ...]:
+                 confirmed_swings: Sequence[SwingPoint] | None = None,
+                 merge_overlaps: bool = True) -> tuple[Zone, ...]:
     """Build deterministically merged zones from confirmed pivots and an as-of prefix."""
     cfg = config or ZoneConfig()
     swings = list(confirmed_swings) if confirmed_swings is not None else find_confirmed_swings(
@@ -173,7 +174,9 @@ def detect_zones(rows: Sequence[Mapping[str, Any]], *, security_id: str,
     # Merge overlapping same-side geometry. The oldest zone keeps its ID; other IDs
     # are recorded as absorbed aliases. Merely adjacent intervals do not merge.
     merged: list[tuple[Zone, int, int]] = []
-    for item in sorted(candidates, key=lambda x: (x[0].side, x[1], x[0].zone_id)):
+    if not merge_overlaps:
+        merged = candidates.copy()
+    for item in ([] if not merge_overlaps else sorted(candidates, key=lambda x: (x[0].side, x[1], x[0].zone_id))):
         zone, first_i, last_i = item
         hits = [j for j, (old, _, _) in enumerate(merged)
                 if old.side == zone.side and zone.lower_bound <= old.upper_bound and old.lower_bound <= zone.upper_bound]

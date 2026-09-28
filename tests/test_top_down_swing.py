@@ -139,6 +139,39 @@ def test_all_four_completed_hourly_confirmation_archetypes():
     assert _hourly_pattern(retest, [resistance], None, 6)[0] == "BREAKOUT_RETEST_CONFIRMATION"
 
 
+def test_corrected_hourly_confirmation_excludes_broken_support_and_uses_lower_support():
+    broken = replace(_zone("support", 109, 111, "broken"), broken=True,
+                     role_state="RESISTANCE_CANDIDATE", role_flip="support_to_resistance_candidate")
+    lower = replace(_zone("support", 99, 101, "lower"), strength="MEANINGFUL", role_state="ACTIVE")
+    bar = [{"date": "2024-01-02T10:15:00+05:30", "open": 100, "high": 103,
+            "low": 99, "close": 102, "volume": 200}]
+    pattern, reasons, evidence = _hourly_pattern(bar, [broken, lower], None, 6,
+                                                  require_valid_zones=True)
+    assert pattern == "SUPPORT_HOLD_CONFIRMATION"
+    assert evidence["held_support_zone_ids"] == ["lower"]
+    assert "HOURLY_SUPPORT_ROLE_VALID" in reasons
+    broken_only, _, broken_evidence = _hourly_pattern(bar, [broken], None, 6,
+                                                       require_valid_zones=True)
+    assert broken_only is None
+    assert broken_evidence["support_zone_eligibility"][0]["reason_code"] == "HOURLY_SUPPORT_ROLE_INVALID_BROKEN"
+
+
+def test_corrected_hourly_confirmation_accepts_confirmed_role_flip_and_rejects_minor():
+    flipped = replace(_zone("support", 99, 101, "flip"), original_side="resistance",
+        broken=True, role_state="SUPPORT_CONFIRMED", role_flip="resistance_to_support_candidate")
+    bar = [{"date": "2024-01-02T10:15:00+05:30", "open": 100, "high": 103,
+            "low": 99, "close": 102, "volume": 200}]
+    pattern, reasons, evidence = _hourly_pattern(bar, [flipped], None, 6,
+                                                  require_valid_zones=True)
+    assert pattern == "SUPPORT_HOLD_CONFIRMATION"
+    assert "HOURLY_ROLE_FLIP_CONFIRMED" in reasons
+    minor = replace(_zone("support", 99, 101, "minor"), strength="MINOR", role_state="ACTIVE")
+    pattern, _, minor_evidence = _hourly_pattern(bar, [minor], None, 6,
+                                                  require_valid_zones=True)
+    assert pattern is None
+    assert minor_evidence["support_zone_eligibility"][0]["reason_code"] == "HOURLY_ZONE_TOO_MINOR_FOR_CONFIRMATION"
+
+
 def test_hourly_confirmation_uses_completed_bars_and_next_bar_open(monkeypatch):
     support = _zone("support", 99, 101, "support")
     monkeypatch.setattr(strategy, "_zones", lambda rows, security_id, config: (support,))
@@ -202,6 +235,34 @@ def test_daily_candidate_is_deterministic_and_does_not_use_future_week_rows(monk
                             "low": 1, "close": 9000, "volume": 999999}]
     second = evaluate_daily_candidate(**{**inputs, "weekly_rows": weekly})
     assert first == second
+
+
+def test_report_weekly_structure_uses_weekly_swings_and_range_position_is_numeric(monkeypatch):
+    cfg = TopDownConfig()
+    daily_support, daily_resistance = _zone("support", 98, 100, "daily-s"), _zone("resistance", 128, 130, "daily-r")
+    weekly_support, weekly_resistance = _zone("support", 95, 97, "weekly-s"), _zone("resistance", 145, 147, "weekly-r")
+    def zones(rows, security_id, config):
+        zone_cfg = config
+        if zone_cfg is cfg.daily_zone: return (daily_support, daily_resistance)
+        if zone_cfg is cfg.weekly_zone: return (weekly_support, weekly_resistance)
+        return ()
+    monkeypatch.setattr(strategy, "_zones", zones)
+    monkeypatch.setattr(strategy, "_lifecycle_snapshot", lambda zones, rows, config, strategy_config=None: zones)
+    weekly = []
+    levels = [100, 110, 98, 112, 96, 114, 97, 113, 99, 115, 100, 116]
+    for i, close in enumerate(levels):
+        weekly.append({"date": (date(2022, 1, 3)+timedelta(days=7*i)).isoformat(), "open": close,
+                       "high": close+1, "low": close-1, "close": close, "volume": 1000})
+    daily = _bars([105 + (i % 3) for i in range(40)])
+    result = evaluate_daily_candidate(security_id="SEC", symbol="TEST", daily_rows=daily,
+        weekly_rows=weekly, nifty_weekly_regime={"regime":"NEUTRAL","component_values":{"completed_weeks":30}},
+        weekly_selection={"features_available":True,"completed_weeks":30,"relative_strength_4w":.01,
+            "relative_strength_13w":.02,"status":"eligible"}, config=cfg)
+    weekly_swings = strategy.find_confirmed_swings(weekly, left=cfg.weekly_zone.swing_left, right=cfg.weekly_zone.swing_right)
+    assert result["weekly_structure"]["confirmed_swing_highs"] == sum(s.kind == "resistance" for s in weekly_swings)
+    assert result["weekly_structure"]["confirmed_swing_lows"] == sum(s.kind == "support" for s in weekly_swings)
+    assert result["structural_range_position"] == result["daily_location_components"]["structural_position_fraction"]
+    assert isinstance(result["structural_range_position"], float)
 
 
 def test_lifecycle_snapshot_requires_two_closes_and_subsequent_retest():
