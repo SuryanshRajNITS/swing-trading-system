@@ -1,0 +1,44 @@
+version: top_down_swing_v3_1
+research_period:
+  start: 2023-01-01
+  end: 2024-12-31
+  daily_warmup_start: 2022-07-01
+  hourly_warmup_start: 2022-10-01
+regime:
+  recent_sessions: 60
+  candidate_confirmation_sessions: 2
+  swing_left: 3
+  swing_right: 3
+  minimum_reaction_atr: 0.75
+  ema_periods: [50, 200]
+  ema_interaction_lookback: 20
+  ema_touch_atr: 0.35
+trendlines:
+  tolerance_atr: 0.20
+  confirmed_break_atr: 0.35
+  preliminary_contacts: 2
+  established_contacts: 3
+  strong_contacts: 4
+setups:
+  minimum_structural_rr: 1.5
+  confirmation_expiry_sessions: 10
+  support_near_atr: 0.75
+  channel_lower_region_max: 0.40
+  stop_buffer_atr: 0.25
+  friction_distance_atr: 0.50
+  clearance_buffer_atr: 0.10
+  volume_lookback: 20
+  breakout_acceptance_closes: 2
+  consolidation_bars: 6
+portfolio:
+  initial_capital: 100000
+  risk_fraction: 0.0075
+  max_open_positions: 4
+  max_single_position_notional_fraction: 0.35
+  max_total_open_risk_fraction: 0.035
+  allow_leverage: false
+trade_management:
+  primary_arm: structural_stop_target
+  protection_research_arm: false
+period_exclusions:
+  forbid_after: 2024-12-31

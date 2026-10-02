@@ -298,6 +298,12 @@ class UniverseProvider:
             )
         return sorted(result, key=lambda security: security.symbol)
 
+    def is_security_eligible(self, security_id: str, trading_date: date,
+                             universe_id: str = PIT_TRADABLE) -> bool:
+        """Check dated membership by stable security ID, never mutable ticker text."""
+        return any(member.security_id == security_id
+                   for member in self.members_on(trading_date, universe_id))
+
     def current_members(self, trading_date: date | None = None) -> list[Security]:
         """Query the separately curated current universe (not a PIT fallback)."""
         if trading_date is None:
